@@ -8,12 +8,12 @@ http://opensource.org/licenses/BSD-3-Clause
 """
 
 import difflib
-import httplib
+import http.client
 import random
 import socket
 import string
-import urllib2
-import urlparse
+import urllib.request
+import urllib.parse
 
 TIMEOUT = 10
 MAX_READ = 64*1024
@@ -76,7 +76,7 @@ def get_parent(url):
     >>> get_parent('http://site.com/one/two/')
     'http://site.com/one/'
     """
-    scheme, host, path = urlparse.urlparse(url)[:3]
+    scheme, host, path = urllib.parse.urlparse(url)[:3]
     if path.endswith('/'):
         path = path[:-1]
     parent_path = '/'.join(path.split('/')[:-1])
@@ -92,7 +92,7 @@ def get_path(url):
     >>> get_path('http://site.com/path/to/page/')
     '/path/to/page/'
     """
-    scheme, host, path = urlparse.urlparse(url)[:3]
+    scheme, host, path = urllib.parse.urlparse(url)[:3]
     if path == '':
         path = '/'
     return path
@@ -104,7 +104,7 @@ class Redirect(Exception):
         self.newurl = newurl
         self.fp = fp
 
-class NoRedirects(urllib2.HTTPRedirectHandler):
+class NoRedirects(urllib.request.HTTPRedirectHandler):
     """Redirect handler that simply raises a Redirect()."""
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise Redirect(code, newurl, fp)
@@ -115,16 +115,16 @@ def atomic_fetch(url):
     None on error, and newurl is the new location if it's a redirect or
     None if not.
     """
-    opener = urllib2.build_opener(NoRedirects())
+    opener = urllib.request.build_opener(NoRedirects())
     try:
         fp = opener.open(url)
         html = fp.read(MAX_READ)
         return (html, None)      # normal page (code 200)
-    except Redirect, e:
+    except Redirect as e:
         html = e.fp.read(MAX_READ)
         return (html, e.newurl)  # redirect (code 3xx)
-    except (urllib2.URLError, httplib.HTTPException, \
-            socket.timeout, ValueError), e:
+    except (urllib.request.URLError, http.client.HTTPException, \
+            socket.timeout, ValueError) as e:
         return (None, None)      # page not found (4xx, 5xx, or other error)
 
 def fetch(url):
@@ -183,8 +183,8 @@ def is_dead(url):
 def main():
     import sys
     if len(sys.argv) < 2:
-        print 'Soft 404 (dead page) detector by Ben Hoyt'
-        print 'Usage: soft404.py url|test'
+        print('Soft 404 (dead page) detector by Ben Hoyt')
+        print('Usage: soft404.py url|test')
         sys.exit(2)
     url = sys.argv[1]
     if url == 'test':
@@ -192,10 +192,10 @@ def main():
         doctest.testmod()
         sys.exit(0)
     if is_dead(url):
-        print 'dead:', url
+        print('dead:'), url
         sys.exit(1)
     else:
-        print 'alive:', url
+        print('alive:'), url
         sys.exit(0)
 
 if __name__ == '__main__':
